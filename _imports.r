@@ -34,6 +34,7 @@ import::from(
 	, tar_destroy
 	, tar_target
 	, tar_make
+	, tar_read
 )
 import::from(
 	tarchetypes

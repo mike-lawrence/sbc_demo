@@ -6,7 +6,7 @@ sample_and_summarise = function(generated,sample_stan_file){
 		, dir = './stan_temp'
 	)
 	sampled = sample_mod$sample(
-		data = true_and_data$data_for_stan
+		data = generated$data_for_stan
 		, chains = parallel::detectCores()/2
 		, parallel_chains = parallel::detectCores()/2
 		, show_messages = F

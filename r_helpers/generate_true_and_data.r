@@ -1,5 +1,5 @@
 generate_true_and_data = function(n,k,iteration,generate_stan_file){
-	gen_args = tibble(n,k,iteration,generate_stan_file)
+	gen_args = tibble(n,k,iteration)
 	data_for_stan = lst(n,k)
 	generate_mod = cmdstanr::cmdstan_model(
 		generate_stan_file

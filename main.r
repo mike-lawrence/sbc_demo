@@ -78,8 +78,28 @@ a = bind_rows(tar_read(summaries))
 	)
 )
 
+
+
+
+# define a function to compute the dECDF confidence ellipse
+#   very possibly not the right thing to do! (came up with this myself)
+bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
+	rank_rank = (1:n)/n - (1/n/2)
+	deltas = matrix(
+		NA
+		, nrow = n
+		, ncol = bootstrap_iterations
+	)
+	for(i in 1:bootstrap_iterations){
+		deltas[,i] = sort(runif(n)) - rank_rank
+	}
+	lo = apply(deltas,1,quantile,probs=(1-interval_perc)/2)
+	hi = apply(deltas,1,quantile,probs=1-(1-interval_perc)/2)
+	return(tibble(lo,hi))
+}
+
 #show the dECDF for a specific parameter
-# (need to work out how to compute/add the confidence ellipse)
+# plus the possibly-erroneous bootstrapped CI ellipse
 (
 	a
 	%>% filter(
@@ -96,8 +116,19 @@ a = bind_rows(tar_read(summaries))
 	%>% mutate(
 		rank_rank = (1:n())/n() - (1/n()/2)
 		, delta = rank - rank_rank
+		, ci = bootstrap_decdf_ci(n())
 	)
 	%>% ggplot()
+	+ geom_ribbon(
+		aes(
+			x = rank_rank
+			, ymin = ci$lo
+			, ymax = ci$hi
+			, colour = interaction(variable,model,n,k)
+		)
+		, fill = 'transparent'
+		, linetype = 3
+	)
 	+ geom_line(
 		aes(
 			x = rank_rank
@@ -106,7 +137,6 @@ a = bind_rows(tar_read(summaries))
 		)
 	)
 	+ scale_x_continuous(limits=c(0,1),expand=c(0,0))
-	+ scale_y_continuous(limits=c(-.5,.5),expand=c(0,0))
 	+ theme(
 		legend.position='top'
 		, aspect.ratio = 1

@@ -8,10 +8,7 @@ tar_glimpse()
 
 #make the targets as a rstudio job
 (
-	"targets::tar_make_clustermq(
-		workers = parallel::detectCores()/2
-		, reporter = 'summary'
-	)"
+	"targets::tar_make()"
 	%>% (function(x){
 		temp_file = tempfile()
 		write(x,file=temp_file)
@@ -21,7 +18,6 @@ tar_glimpse()
 		workingDir = getwd()
 	)
 )
-
 
 #open a shiny dashboard to watch the progress
 tar_watch(

@@ -19,7 +19,7 @@ tar_option_set(
 list(
 	tar_target(
 		name = iteration
-		, command = {1:1e2}
+		, command = {1:1e3} #probably want this to be 1:1e3 for real work
 	)
 
 	, tar_target(

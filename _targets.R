@@ -36,15 +36,15 @@ list(
 	)
 
 	, tar_target(
-		name = true_and_data
+		name = generated
 		, command = generate_true_and_data(n,k,iteration,'stan_code/mvn_generate.stan')
 		, pattern = cross(n,k,iteration)
 	)
 
 	, tar_target(
 		name = summaries
-		, command = sample_and_summarise(true_and_data,'stan_code/mvn.stan')
-		, pattern = map(true_and_data)
+		, command = sample_and_summarise(generated,'stan_code/mvn.stan')
+		, pattern = map(generated)
 		, deployment = 'main'
 	)
 

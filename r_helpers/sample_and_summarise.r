@@ -1,14 +1,11 @@
-# true_and_data = targets::tar_read(true_and_data,branches=6000)[[1]]
-# stan_file = 'stan_code/mvn.stan'
-# sample_and_summarise(true_and_data,stan_file)
-sample_and_summarise = function(true_and_data,stan_file){
-	model = cmdstanr::cmdstan_model(
-		stan_file
+sample_and_summarise = function(generated,sample_stan_file){
+	csv_base = paste(as.list(generated$gen_args),collapse='_')
+	sample_mod = cmdstanr::cmdstan_model(
+		sample_stan_file
 		, include_paths = './stan_code'
 		, dir = './stan_temp'
 	)
-	csv_base = with(true_and_data,paste(n,k,iteration,sep='_'))
-	sampled <- model$sample(
+	sampled = sample_mod$sample(
 		data = true_and_data$data_for_stan
 		, chains = parallel::detectCores()/2
 		, parallel_chains = parallel::detectCores()/2
@@ -16,19 +13,19 @@ sample_and_summarise = function(true_and_data,stan_file){
 		, refresh = 1
 		, output_dir = 'stan_temp'
 		, output_basename = csv_base
-		, seed = abs(digest::digest2int(csv_base))
-		, init = .1
+		, seed = abs(digest::digest2int(digest::digest(generated$data_for_stan,algo='xxhash64')))
 	)
-	# get the diagnostics-check output (will parse later)
-	diagnostics = sampled$cmdstan_diagnose()$stdout #annoyingly not quiet-able
-	#get ranks
+	#get ranks & other summaries
 	(
 		sampled$draws()
 		%>% posterior::as_draws_df()
 		%>% as_tibble()
 		%>% select(-.chain,-.iteration)
 		%>% pivot_longer(-.draw)
-		%>% left_join(true_and_data$true_pars,by='name')
+		%>% left_join(generated$true_pars,by='name')
+		%>% filter(
+			!is.na(true)
+		)
 		%>% rename(variable=name)
 		%>% group_by(variable)
 		%>% summarise(
@@ -54,16 +51,22 @@ sample_and_summarise = function(true_and_data,stan_file){
 			)
 			, by = 'variable'
 		)
-		%>% bind_cols(
-			tibble(
-				treedepth_maxed = stringr::str_detect(diagnostics,'transitions hit the maximum')
-				, ebfmi_low = stringr::str_detect(diagnostics,' is below the nominal threshold')
-				, essp_low = stringr::str_detect(diagnostics,'The following parameters had fewer than')
-				, rhat_high = stringr::str_detect(diagnostics,'The following parameters had split R-hat greater than')
-			)
-		)
 	) -> posterior_summary
+	(
+		sampled$sampler_diagnostics()
+		%>% posterior::as_draws_df()
+		%>% summarise(
+			max_treedepth = max(treedepth__)
+			, num_divergent = sum(divergent__)
+			, var_energy = var(energy__)
+		)
+		%>% mutate(
+			time = sampled$time()$total
+			, var_summary = list(posterior_summary)
+			, model = basename(sample_stan_file)
+		)
+	) -> to_return
 	#delete the csvs
 	system(paste0('rm stan_temp/',csv_base,'*'))
-	return(posterior_summary)
+	return(to_return)
 }

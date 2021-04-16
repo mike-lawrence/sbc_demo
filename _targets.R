@@ -1,7 +1,6 @@
 source('_imports.r')
 source('r_helpers/generate_true_and_data.r')
 source('r_helpers/sample_and_summarise.r')
-options(clustermq.scheduler = "multicore")
 options(tidyverse.quiet = TRUE)
 library(targets)
 
@@ -12,11 +11,9 @@ tar_option_set(
 	, resources = list(
 		preset = 'fast'
 	)
-	# , error = 'workspace'
-	, error = 'continue'
+	, error = 'workspace'
+	# , error = 'continue'
 	, memory = 'transient'
-	, storage = 'worker'
-	, retrieval = 'worker'
 )
 
 list(

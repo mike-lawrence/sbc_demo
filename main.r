@@ -81,22 +81,24 @@ a = bind_rows(tar_read(summaries))
 # define a function to compute the dECDF confidence ellipse
 #   very possibly not the right thing to do! (came up with this myself)
 bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
-	rank_rank = (1:n)/n - (1/n/2)
+	expected_rank = (1:n)/n - (1/n/2)
 	deltas = matrix(
 		NA
 		, nrow = n
 		, ncol = bootstrap_iterations
 	)
 	for(i in 1:bootstrap_iterations){
-		deltas[,i] = sort(runif(n)) - rank_rank
+		deltas[,i] = sort(runif(n)) - expected_rank
 	}
 	lo = apply(deltas,1,quantile,probs=(1-interval_perc)/2)
 	hi = apply(deltas,1,quantile,probs=1-(1-interval_perc)/2)
-	return(tibble(lo,hi))
+	return(tibble(expected_rank,lo,hi))
 }
 
-#show the dECDF for a specific parameter
-# plus the possibly-erroneous bootstrapped CI ellipse
+#compute the CI ellipse given the number of iterations (assumed to be the same across models)
+ci_ellipse = bootstrap_decdf_ci(max(a$iteration))
+
+#show the dECDF for a specific parameter (plus the ci)
 (
 	a
 	%>% filter(
@@ -111,32 +113,31 @@ bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
 	%>% group_by(variable,model,n,k)
 	%>% arrange(rank)
 	%>% mutate(
-		rank_rank = (1:n())/n() - (1/n()/2)
-		, delta = rank - rank_rank
-		, ci = bootstrap_decdf_ci(n())
+		expected_rank = (1:n())/n() - (1/n()/2)
+		, delta = rank - expected_rank
 	)
 	%>% ggplot()
 	+ geom_ribbon(
-		aes(
-			x = rank_rank
-			, ymin = ci$lo
-			, ymax = ci$hi
-			, colour = interaction(variable,model,n,k)
+		data = ci_ellipse
+		, aes(
+			x = expected_rank
+			, ymin = lo
+			, ymax = hi
 		)
 		, fill = 'transparent'
+		, colour = 'black'
 		, linetype = 3
 	)
 	+ geom_line(
 		aes(
-			x = rank_rank
+			x = expected_rank
 			, y = delta
 			, colour = interaction(variable,model,n,k)
 		)
 	)
 	+ scale_x_continuous(limits=c(0,1),expand=c(0,0))
 	+ theme(
-		legend.position='top'
-		, aspect.ratio = 1
+		aspect.ratio = 1
 	)
 )
 
@@ -146,13 +147,16 @@ bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
 # where the data leading to the observed ecdf are indeed generated
 # from the distribution leading to the expected ecdf
 get_sim_r = function(n,iterations=1e5){
-	rank_rank = (1:n)/n - (1/n/2)
+	expected_rank = (1:n)/n - (1/n/2)
 	sim_r = rep(NA, iterations)
 	for(i in 1:iterations){
-		sim_r[i] = cor(sort(runif(n)),rank_rank)
+		sim_r[i] = cor(sort(runif(n)),expected_rank)
 	}
 	return(sim_r)
 }
+
+#compute a distribution of r-from-the-null given the number of iterations (assumed to be the same across models)
+sim_r = get_sim_r(max(a$iteration))
 
 #for each variable, compute an omnibus test of the ecdf
 (
@@ -168,22 +172,14 @@ get_sim_r = function(n,iterations=1e5){
 	%>% group_by(variable,model,n,k)
 	%>% arrange(rank)
 	%>% summarise(
-		count = n()
-		, obs_r = cor(rank,(1:count)/count - (1/count/2))
+		obs_r = cor(rank,(1:n())/n() - (1/n()/2))
 		, .groups = 'drop'
 	)
-	%>% (function(x){
-		sim_r = get_sim_r(x$count[1])
-		(
-			x
-			%>% group_by(variable,model,n,k)
-			%>% mutate(
-				rp = mean(obs_r>sim_r)
-				, sig = case_when(rp<.05~'*',T~'') #arbitrary
-			)
-			%>% select(-obs_r,-count)
-		)
-	})
+	%>% group_by(variable,model,n,k)
+	%>% transmute(
+		rp = mean(obs_r>sim_r)
+		, sig = case_when(rp<.05~'*',T~'') #arbitrary
+	)
 	%>% arrange(model,n,k,variable)
 ) -> rp_vals
 

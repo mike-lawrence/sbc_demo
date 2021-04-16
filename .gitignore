@@ -44,3 +44,5 @@ plots/*
 #stan_temp
 stan_temp/
 
+#ignore targets folder
+_targets

@@ -19,7 +19,7 @@ tar_option_set(
 list(
 	tar_target(
 		name = iteration
-		, command = {1:1e3}
+		, command = {1:1e2}
 	)
 
 	, tar_target(
@@ -29,7 +29,7 @@ list(
 
 	, tar_target(
 		name = k
-		, command = {c(2,5,15)}
+		, command = {c(2)}
 	)
 
 	, tar_target(

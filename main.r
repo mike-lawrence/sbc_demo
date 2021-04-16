@@ -37,10 +37,17 @@ a = bind_cols(tar_read(summaries))
 	%>% pivot_longer(-model)
 	%>% ggplot()
 	+ facet_wrap(
-		~interaction(model,name)
+		~name
 		, scales = 'free'
 	)
-	+ geom_histogram(aes(x=value))
+	+ geom_histogram(
+		aes(
+			x = value
+			, fill = model
+		)
+		, alpha = .5 #for when there are multiple models being compared
+		, position = 'identity' #default is stacked, which sucks
+	)
 )
 
 #show the per-parameter diagnostics
@@ -58,10 +65,17 @@ a = bind_cols(tar_read(summaries))
 	%>% pivot_longer(-model)
 	%>% ggplot()
 	+ facet_wrap(
-		~interaction(model,name)
+		~name
 		, scales = 'free'
 	)
-	+ geom_histogram(aes(x=value))
+	+ geom_histogram(
+		aes(
+			x = value
+			, fill = model
+		)
+		, alpha = .5 #for when there are multiple models being compared
+		, position = 'identity' #default is stacked, which sucks
+	)
 )
 
 #show the dECDF for a specific parameter

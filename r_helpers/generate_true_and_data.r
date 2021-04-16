@@ -2,7 +2,7 @@ generate_true_and_data = function(n,k,iteration,generate_stan_file){
 	gen_args = tibble(n,k,iteration,generate_stan_file)
 	data_for_stan = lst(n,k)
 	generate_mod = cmdstanr::cmdstan_model(
-		stan_file
+		generate_stan_file
 		, include_paths = './stan_code'
 		, dir = './stan_temp'
 	)

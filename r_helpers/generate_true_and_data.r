@@ -6,6 +6,7 @@ generate_true_and_data = function(n,k,iteration,stan_file){
 	mod = cmdstanr::cmdstan_model(
 		stan_file
 		, include_paths = './stan_code'
+		, dir = './stan_temp'
 	)
 	quantities = mod$generate_quantities(
 		data = lst(n,k)

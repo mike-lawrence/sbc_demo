@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+#plots
+plots/*
+
+#stan_temp
+stan_temp/
+

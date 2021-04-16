@@ -4,7 +4,8 @@
 sample_and_summarise = function(true_and_data,stan_file){
 	model = cmdstanr::cmdstan_model(
 		stan_file
-		, include_path = 'stan_code'
+		, include_paths = './stan_code'
+		, dir = './stan_temp'
 	)
 	csv_base = with(true_and_data,paste(n,k,iteration,sep='_'))
 	sampled <- model$sample(

@@ -65,6 +65,7 @@ sample_and_summarise = function(generated,sample_stan_file){
 			, var_summary = list(posterior_summary)
 			, model = basename(sample_stan_file)
 		)
+		%>% bind_cols(generated$gen_args)
 	) -> to_return
 	#delete the csvs
 	system(paste0('rm stan_temp/',csv_base,'*'))

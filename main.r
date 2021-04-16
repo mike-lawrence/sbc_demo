@@ -28,13 +28,13 @@ tar_watch(
 )
 
 #when done, gather results (could add all the below as new targets too)
-a = bind_cols(tar_read(summaries))
+a = bind_rows(tar_read(summaries))
 
 #show diagnostics & timing
 (
 	a
 	%>% select(-var_summary)
-	%>% pivot_longer(-model)
+	%>% pivot_longer(cols=c(-model,-n,-k,-iteration))
 	%>% ggplot()
 	+ facet_wrap(
 		~name
@@ -43,7 +43,7 @@ a = bind_cols(tar_read(summaries))
 	+ geom_histogram(
 		aes(
 			x = value
-			, fill = model
+			, fill = interaction(model,n,k)
 		)
 		, alpha = .5 #for when there are multiple models being compared
 		, position = 'identity' #default is stacked, which sucks
@@ -56,13 +56,13 @@ a = bind_cols(tar_read(summaries))
 	%>% filter(
 		num_divergent==0 # possibly questionable!!
 	)
-	%>% select(model,var_summary)
+	%>% select(var_summary,model,n,k,iteration)
 	%>% unnest(var_summary)
 	%>% filter(
 		!is.na(rhat) # some parameters are constant in the mvn model
 	)
-	%>% select(model,rank,rhat,ess_bulk,ess_tail)
-	%>% pivot_longer(-model)
+	%>% select(rank,rhat,ess_bulk,ess_tail,model,n,k,iteration)
+	%>% pivot_longer(cols=c(-model,-n,-k,-iteration))
 	%>% ggplot()
 	+ facet_wrap(
 		~name
@@ -71,7 +71,7 @@ a = bind_cols(tar_read(summaries))
 	+ geom_histogram(
 		aes(
 			x = value
-			, fill = model
+			, fill = interaction(model,n,k)
 		)
 		, alpha = .5 #for when there are multiple models being compared
 		, position = 'identity' #default is stacked, which sucks
@@ -85,22 +85,25 @@ a = bind_cols(tar_read(summaries))
 	%>% filter(
 		num_divergent==0 # possibly questionable!!
 	)
-	%>% select(model,var_summary)
+	%>% select(var_summary,model,n,k,iteration)
 	%>% unnest(var_summary)
-	%>% filter(variable=='means[1]')
 	%>% filter(
-		rhat<1.01 # possibly questionable!!
+		variable=='means[1]'
+		, rhat<1.01 # possibly questionable!!
 	)
-	%>% group_by(model)
+	%>% group_by(variable,model,n,k)
 	%>% arrange(rank)
 	%>% mutate(
 		rank_rank = (1:n())/n() - (1/n()/2)
 		, delta = rank - rank_rank
 	)
 	%>% ggplot()
-	+ geom_point(
-		aes(x=rank,y=delta,colour=model)
-		, alpha = .5
+	+ geom_line(
+		aes(
+			x = rank_rank
+			, y = delta
+			, colour = interaction(variable,model,n,k)
+		)
 	)
 	+ scale_x_continuous(limits=c(0,1),expand=c(0,0))
 	+ scale_y_continuous(limits=c(-.5,.5),expand=c(0,0))

@@ -78,9 +78,6 @@ a = bind_rows(tar_read(summaries))
 	)
 )
 
-
-
-
 # define a function to compute the dECDF confidence ellipse
 #   very possibly not the right thing to do! (came up with this myself)
 bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
@@ -142,3 +139,52 @@ bootstrap_decdf_ci = function(n,bootstrap_iterations=1e5,interval_perc=.9){
 		, aspect.ratio = 1
 	)
 )
+
+
+#define a function that generates a distribution of
+# observed_ecdf-to-expected_ecdf correlations under circumstances
+# where the data leading to the observed ecdf are indeed generated
+# from the distribution leading to the expected ecdf
+get_sim_r = function(n,iterations=1e5){
+	rank_rank = (1:n)/n - (1/n/2)
+	sim_r = rep(NA, iterations)
+	for(i in 1:iterations){
+		sim_r[i] = cor(sort(runif(n)),rank_rank)
+	}
+	return(sim_r)
+}
+
+#for each variable, compute an omnibus test of the ecdf
+(
+	a
+	%>% filter(
+		num_divergent==0 # possibly questionable!!
+	)
+	%>% select(var_summary,model,n,k,iteration)
+	%>% unnest(var_summary)
+	%>% filter(
+		rhat<1.01 # possibly questionable!!
+	)
+	%>% group_by(variable,model,n,k)
+	%>% arrange(rank)
+	%>% summarise(
+		count = n()
+		, obs_r = cor(rank,(1:count)/count - (1/count/2))
+		, .groups = 'drop'
+	)
+	%>% (function(x){
+		sim_r = get_sim_r(x$count[1])
+		(
+			x
+			%>% group_by(variable,model,n,k)
+			%>% mutate(
+				rp = mean(obs_r>sim_r)
+				, sig = case_when(rp<.05~'*',T~'') #arbitrary
+			)
+			%>% select(-obs_r,-count)
+		)
+	})
+	%>% arrange(model,n,k,variable)
+) -> rp_vals
+
+View(rp_vals)

@@ -1,24 +1,28 @@
-generate_true_and_data = function(n,k,iteration,generate_stan_file){
-	gen_args = tibble(n,k,iteration)
-	data_for_stan = lst(n,k)
-	generate_mod = cmdstanr::cmdstan_model(
-		generate_stan_file
+compile_stan_file = function(stan_file){
+	mod = cmdstanr::cmdstan_model(
+		stan_file
 		, include_paths = './stan_code'
 		, dir = './stan_temp'
 	)
-	gq = generate_mod$generate_quantities(
+	return(mod)
+}
+
+generate_true_and_data = function(n,k,iteration,stan_mod_for_generating){
+	gen_args = tibble(n,k,iteration)
+	data_for_stan = lst(n,k)
+	gq = stan_mod_for_generating$generate_quantities(
 		data = data_for_stan
 		, fitted_params = posterior::as_draws_array(tibble(dummy_=0))
 		, seed = abs(digest::digest2int(digest::digest(gen_args,algo='xxhash64')))
 	)
 	#add generated y to data (probably a more straight-forward way to do this!)
-	data_for_stan$y = (
+	(
 		gq$draws('y')
 		%>% posterior::as_draws_rvars()
 		%>% (function(y){
 			posterior::draws_of(y$y)[1,,]
 		})
-	)
+	) -> data_for_stan$y
 	#get parameters
 	(
 		gq$draws()

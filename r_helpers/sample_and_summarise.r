@@ -1,11 +1,6 @@
-sample_and_summarise = function(generated,sample_stan_file){
+sample_and_summarise = function(generated,stan_mod_for_sampling){
 	csv_base = paste(as.list(generated$gen_args),collapse='_')
-	sample_mod = cmdstanr::cmdstan_model(
-		sample_stan_file
-		, include_paths = './stan_code'
-		, dir = './stan_temp'
-	)
-	sampled = sample_mod$sample(
+	sampled = stan_mod_for_sampling$sample(
 		data = generated$data_for_stan
 		, chains = parallel::detectCores()/2
 		, parallel_chains = parallel::detectCores()/2
@@ -63,7 +58,11 @@ sample_and_summarise = function(generated,sample_stan_file){
 		%>% mutate(
 			time = sampled$time()$total
 			, var_summary = list(posterior_summary)
-			, model = basename(sample_stan_file)
+			, model = str_replace(
+				basename(stan_mod_for_sampling$stan_file())
+				, fixed('.stan')
+				, ''
+			)
 		)
 		%>% bind_cols(generated$gen_args)
 	) -> to_return

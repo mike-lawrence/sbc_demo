@@ -33,16 +33,40 @@ list(
 	)
 
 	, tar_target(
+		name = stan_file_for_generating
+		, command = {'stan_code/mvn_generate.stan'}
+		, format = 'file'
+	)
+	, tar_target(
+		name = stan_mod_for_generating
+		, command = compile_stan_file(stan_file_for_generating)
+	)
+	, tar_target(
 		name = generated
-		, command = generate_true_and_data(n,k,iteration,'stan_code/mvn_generate.stan')
+		, command = generate_true_and_data(n,k,iteration,stan_mod_for_generating)
 		, pattern = cross(n,k,iteration)
 	)
 
 	, tar_target(
+		name = stan_file_for_sampling_name
+		, command = {c('stan_code/mvn.stan','stan_code/sufficient.stan')}
+	)
+	, tar_target(
+		name = stan_file_for_sampling
+		, command = identity(stan_file_for_sampling_name)
+		, format = 'file'
+		, pattern = map(stan_file_for_sampling_name)
+	)
+	, tar_target(
+		name = stan_mod_for_sampling
+		, command = compile_stan_file(stan_file_for_sampling)
+		, pattern = map(stan_file_for_sampling)
+	)
+	, tar_target(
 		name = summaries
-		, command = sample_and_summarise(generated,'stan_code/mvn.stan')
-		, pattern = map(generated)
-		, deployment = 'main'
+		, command = sample_and_summarise(generated,stan_mod_for_sampling)
+		, pattern = cross(generated,stan_mod_for_sampling)
+		, deployment = 'main' #typically want this unparallel bc cmdstanr will do chains in parallel itself
 	)
 
 )

@@ -36,7 +36,8 @@ import::from(
 	, tar_make
 	, tar_read
 )
-import::from(
-	tarchetypes
-	, tar_map
-)
+# import::from(
+# 	tarchetypes
+# 	, tar_map
+# 	, tar_file
+# )

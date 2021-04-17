@@ -9,11 +9,6 @@ data{
 	// y: array of values for each subj & coef
 	row_vector[k] y[n] ;
 
-	// num_cors: number of correlations implied by the number of coefficients; user-supplied bc Stan is
-	// strict in not permitting conversion from real to int.
-	//   Must be: ((k^2)-k)/2
-	int num_cors ;
-
 }
 transformed data{
 
@@ -37,6 +32,7 @@ transformed data{
 
 	// compute the empirical means & SDs
 	// obs_z_div_se: empirical correlations, on Fisher's Z scale then divided by the SE
+	int num_cors = (k*(k-1))/2 ;
 	vector[num_cors] obs_z ;
 	real corz_se = 1/sqrt(n-3) ;
 	{
@@ -62,11 +58,11 @@ transformed data{
 }
 parameters{
 
-	// pop_means: mean (across subj) for each coefficient
-	vector[k] pop_means ;
+	// means: mean (across subj) for each coefficient
+	vector[k] means ;
 
-	// pop_sds: sd (across subj) for each coefficient
-	vector<lower=0>[k] pop_sds ;
+	// sds: sd (across subj) for each coefficient
+	vector<lower=0>[k] sds ;
 
 	// corz_vec: population-level correlations (on Fisher's-Z scale) among within-subject predictors
 	vector[num_cors] corz_vec ;
@@ -79,10 +75,10 @@ model{
 	////
 
 	// normal(0,1) priors on all means
-	pop_means ~ std_normal() ;
+	means ~ std_normal() ;
 
 	// weibull(2,1) priors on all sds (peaked at ~.8)
-	pop_sds ~ weibull(2,1) ;
+	sds ~ weibull(2,1) ;
 
 	// normal(0,.74) priors on all corz
 	// yields flat prior on abs(cor)<.7, and diminishing to zero by abs(cor)==1
@@ -92,8 +88,8 @@ model{
 	////
 	// Likelihood
 	////
-	obs_means ~ normal( pop_means , pop_sds/sqrt_n ) ;
-    obs_vars  ~ gamma( sd_gamma_shape , sd_gamma_shape ./ pow(pop_sds,2) ) ;
+	obs_means ~ normal( means , sds/sqrt_n ) ;
+    obs_vars  ~ gamma( sd_gamma_shape , sd_gamma_shape ./ pow(sds,2) ) ;
 
 	// expressing the structure for the pairwise correlations
 	obs_z ~ normal(corz_vec,corz_se) ;
